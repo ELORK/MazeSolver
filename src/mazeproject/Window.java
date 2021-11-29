@@ -151,6 +151,7 @@ public class Window extends JFrame{
         selectSolveCombo.addItem("Recursive");
         
         selectMazeCombo.addItem("DFS");
+        selectMazeCombo.addItem("Prims");
         
         selectSolveCombo.setFont(new Font("Sans-Serif", 24, 24));
         selectMazeCombo.setFont(new Font("Sans-Serif", 24, 24));
@@ -189,7 +190,7 @@ public class Window extends JFrame{
         
         //man pages button initialisation
         manPageOpen = new JButton("Manual");
-        manPageOpen.setBounds(this.w-190, this.h-110, 180, 60);
+        manPageOpen.setBounds(this.w-210, this.h-110, 180, 60);
         manPageOpen.addActionListener(e -> openManPage());
         
         //adding everything to the window
@@ -352,6 +353,8 @@ public class Window extends JFrame{
         if (maze_str == "DFS") {
             //call the DFS algorithm
             maze.DFS(statMaker);
+        } else if (maze_str == "Prims") {
+            maze.prims(statMaker);
         }
     }
     

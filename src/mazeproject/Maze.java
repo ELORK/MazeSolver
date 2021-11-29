@@ -675,186 +675,109 @@ public class Maze extends JPanel{
     
     public void prims(StatMaker statMaker)
     {
-        //set all the cells to walls
+        //set all the nodes in the maze to a wall
         maze_set();
         
-        //set the starting index to be the index of the start cell 
-        int index = start_node_pos;
+        //array to contain all the cells
+        ArrayList<Integer> cells = new ArrayList<>();
         
-        //instantiate a random number generator
+        //set the statistical generate header to 'prims'
+        statMaker.stat_generate = "Prims";
+        
+        //initialize the random number generator
         Random rand = new Random();
         
-        //array to contain all the walls 
-        ArrayList<Integer> walls = new ArrayList<>();
+        //set the current node to the end node, and begin generation from here
+        int index = start_node_pos;
+        Cell curr = matrix.get(index);
         
-        //set the start node as visited
-        matrix.get(index).set_state(Cell.CELL_START);
-        matrix.get(index).add_state(Cell.CELL_VISITED);
+        //set the current node as visited.
+        curr.add_state(Cell.CELL_VISITED);
         
-        //get all the adjacent walls for that index
-        insert_walls(index, walls);
+        //add the current cell to the cells array
+        cells.add(index);
         
-        //while there are still walls to process
-        while (!walls.isEmpty()) {
-            //get a random index into the walls array
-            int rand_index = rand.nextInt(walls.size());
+        //contain an array which will contain the neighbours
+        ArrayList<Integer> neighbours = null;
+        
+        //while there are cells to visit 
+        while (!cells.isEmpty()) {
             
-            //get the index of the wall for the matrix
-            int wall_index = walls.get(rand_index);
+            //select a random cell 
+            int rand_index = rand.nextInt(cells.size());
             
-            //get a reference to the cell at that index
-            Cell wall = matrix.get(wall_index);
+            //get the index from the cells array
+            index = cells.get(rand_index);
             
-            //if there is 1 visited cell adjacent to the wall
-            if (check_cells(wall_index) == 1) {
-                //set the cell to a path and visited
-                wall.set_state(Cell.CELL_PATH);
-                wall.add_state(Cell.CELL_VISITED);
+            //get a reference to the cell from the maze
+            curr = matrix.get(index);
+            
+            //get all adjacent cells of the current node 
+            neighbours = get_neighbours(index, 2,
+                    Cell.CELL_VISITED);
+            
+            //set the current cell to a path and visited
+            curr.set_state(Cell.CELL_PATH);
+            curr.add_state(Cell.CELL_VISITED);
+            
+            //remove it from the cells array
+            cells.remove(rand_index);
+            
+            //if there are any non-visited neighbours
+            if (!neighbours.isEmpty()) {
+                //get the index of the randomly selected neighbour
+                int tmp_index = neighbours.get(rand.nextInt(neighbours.size()));
+                //get the cell of the randomly selected neighbour
+                Cell tmp = matrix.get(tmp_index);
                 
-                //if the wall is to the left or right of the current index
-                if (wall_index % matrix_w == index % matrix_w) {
-                    //check if it is above or below in the index
-                    if ((int) (wall_index / matrix_w) > 
-                            (int) (index / matrix_w)) {
-                        Cell cell = matrix.get(wall_index+matrix_w);
-                        cell.set_state(Cell.CELL_PATH);
-                        cell.add_state(Cell.CELL_VISITED);
-                        insert_walls(wall_index+matrix_w, walls);
-                     //must be above the index
-                    } else {
-                        Cell cell = matrix.get(wall_index-matrix_w);
-                        cell.set_state(Cell.CELL_PATH);
-                        cell.add_state(Cell.CELL_VISITED);
-                        insert_walls(wall_index-matrix_w, walls);
-                    }
-                    //else, must be to the left or right of the index
-                } else {
-                    //check if it is to the left 
-                    if (wall_index % matrix_w > index % matrix_w) {
-                        Cell cell = matrix.get(wall_index+1);
-                        cell.set_state(Cell.CELL_PATH);
-                        cell.add_state(Cell.CELL_VISITED);
-                        insert_walls(wall_index+1, walls);
-                    //must be to the right
-                    } else {
-                        Cell cell = matrix.get(wall_index-1);
-                        cell.set_state(Cell.CELL_PATH);
-                        cell.add_state(Cell.CELL_VISITED);
-                        insert_walls(wall_index-1, walls);
-                    }
+                //check how the index compares to find the adjacent node 
+                //which needs to be also set.
+                int d = index_compare(index, tmp_index);
+                switch (d) {
+                    //meaning that the index is to the right of tmp_index
+                    case 0:
+                        //set the left-adjacent cell to a path
+                        matrix.get(index-1).set_state(Cell.CELL_PATH);
+                        matrix.get(index-1).add_state(Cell.CELL_VISITED);
+                        break;
+                    //meaing that the index is to the left of tmp_index
+                    case 1:
+                        //set the right-adjacent cell to a path
+                        matrix.get(index+1).set_state(Cell.CELL_PATH);
+                        matrix.get(index+1).add_state(Cell.CELL_VISITED);
+                        break;
+                    //meaning that the index is below tmp_index
+                    case 2:
+                        //set the up-adjacent cell to a path
+                        matrix.get(index-(matrix_w)).set_state(Cell.CELL_PATH);
+                        matrix.get(index-(matrix_w)).add_state(Cell.CELL_VISITED);
+                        break;
+                    //meaning that the index is above tmp_index
+                    case 3:
+                        //set the down-adjacent cell to a path
+                        matrix.get(index+(matrix_w)).set_state(Cell.CELL_PATH);
+                        matrix.get(index+(matrix_w)).add_state(Cell.CELL_VISITED);
+                        break;
                 }
+                tmp.set_state(Cell.CELL_PATH);
             }
             
-            //remove the wall from the walls list 
-            walls.remove(rand_index);
-        }
-    }
-    
-    public void insert_walls(int index, ArrayList<Integer> walls)
-    {
-        //get the x and y coordinates
-        int x = index % matrix_w;
-        int y = (int) (index / matrix_w);
-        
-        //check if the left adjacent index can be out of bounds
-        if (x > 1) {
-            //get a reference to the left-adjacent cell 
-            Cell cell1 = matrix.get(index-1);
-            //check if the cell is wall and not already visited
-            if (cell1.check_state(Cell.CELL_WALL)
-                    && !cell1.check_state(Cell.CELL_VISITED)) {
-                //add the index to the walls list 
-                walls.add(index-1);
+            //add all the non-visited neighbours to the cells array to await
+            //their visit
+            for (int i = 0; i < neighbours.size(); i++) {
+                Cell neighbour = matrix.get(neighbours.get(i));
+                if (!neighbour.check_state(Cell.CELL_VISITED))
+                    cells.add(neighbours.get(i));
             }
         }
         
-        //check if the right adjacent index will be out of bounds
-        if (x < matrix_w - 2) {
-            //get a reference to the left-adjacent cell 
-            Cell cell1 = matrix.get(index+1);
-            //check if the cell is wall and not already visited
-            if (cell1.check_state(Cell.CELL_WALL)
-                    && !cell1.check_state(Cell.CELL_VISITED)) {
-                //add the index to the walls list 
-                walls.add(index+1);
-            }
+        //reset the end node and start node states
+        matrix.get(start_node_pos).set_state(Cell.CELL_START);
+        matrix.get(end_node_pos).set_state(Cell.CELL_END);
+        
+        for (int i = 0; i < matrix.size(); i++) {
+            matrix.get(i).remove_state(Cell.CELL_START);
         }
-        
-        //check if the top adjacent index will be out of bounds
-        if (y > 1) {
-            //get a reference to the left-adjacent cell 
-            Cell cell1 = matrix.get(index-matrix_w);
-            //check if the cell is wall and not already visited
-            if (cell1.check_state(Cell.CELL_WALL)
-                    && !cell1.check_state(Cell.CELL_VISITED)) {
-                //add the index to the walls list 
-                walls.add(index-matrix_w);
-            }
-        }
-        
-        //check if the bottom adjacent index will be out of bounds
-        if (y < matrix_h - 2) {
-            //get a reference to the left-adjacent cell 
-            Cell cell1 = matrix.get(index+matrix_w);
-            //check if the cell is wall and not already visited
-            if (cell1.check_state(Cell.CELL_WALL)
-                    && !cell1.check_state(Cell.CELL_VISITED)) {
-                //add the index to the walls list 
-                walls.add(index+matrix_w);
-            }
-        }
-    }
-    
-    public int check_cells(int wall_index)
-    {
-        //count variable, stores the number of visited cells
-        int count = 0;
-        
-        //get the x and y coordinates 
-        int x = wall_index % matrix_w;
-        int y = (int) (wall_index / matrix_w);
-        
-        //check if the left adjacent cell is not out of bounds
-        if (x > 0) {
-            //get a reference to the left adjacent cell 
-            Cell cell = matrix.get(wall_index-1);
-            //check if the cell is visited
-            if (cell.check_state(Cell.CELL_VISITED))
-                //increment the counter 
-                count++;
-        }
-        
-        //check if the right adjacent cell is not out of bounds
-        if (x < matrix_w - 1) {
-            //get a reference to the right adjacent cell 
-            Cell cell = matrix.get(wall_index+1);
-            //check if the cell is visited
-            if (cell.check_state(Cell.CELL_VISITED))
-                //increment the counter
-                count++;
-        }
-        
-        //check if the top adjacent cell is not out of bounds
-        if (y > 0) {
-            //get a reference to the top adjacent cell 
-            Cell cell = matrix.get(wall_index-matrix_w);
-            //check if the cell is visited
-            if (cell.check_state(Cell.CELL_VISITED))
-                //increment the counter
-                count++;
-        }
-        
-        //check if the bottom adjacent cell is not out of bounds
-        if (y < matrix_h - 1) {
-            //get a reference to the bottom adjacent cell 
-            Cell cell = matrix.get(wall_index+matrix_w);
-            //check if the cell is visited
-            if (cell.check_state(Cell.CELL_VISITED))
-                //increment the counter
-                count++;
-        }
-        
-        return count;
     }
     
     //gets the neighbours of the currently selected cell
