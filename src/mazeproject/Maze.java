@@ -12,8 +12,10 @@ import java.util.LinkedList;
 import java.util.Queue;
 import java.util.Random;
 import java.util.Stack;
+import java.util.TimerTask;
 import javax.swing.BorderFactory;
 import javax.swing.JPanel;
+import javax.swing.Timer;
 
 /**
  *
@@ -118,6 +120,59 @@ public class Maze extends JPanel{
     {
         for (int i = 0; i < matrix.size(); i++) {
             matrix.get(i).remove_state(Cell.CELL_VISITED);
+        }
+    }
+    
+    public void DFS_frame(StatMaker statMaker, Stack stack, int []index_ref)
+    {
+        Random rand = new Random();
+        ArrayList<Integer> neighbours = null;
+        
+        int index = index_ref[0];
+        
+        Cell curr = matrix.get(index);
+        
+        if (!stack.isEmpty()) {
+            neighbours = get_neighbours(index, 2, Cell.CELL_VISITED);
+            
+            if (!neighbours.isEmpty()) {
+                int tmp_index = neighbours.get(rand.nextInt(neighbours.size()));
+                Cell tmp = matrix.get(tmp_index);
+                stack.push(index);
+                
+                int d = index_compare(index, tmp_index);
+                switch (d) {
+                    //meaning that the index is to the right of tmp_index
+                    case 0:
+                        //set the left-adjacent cell to a path
+                        matrix.get(index-1).set_state(Cell.CELL_PATH);
+                        break;
+                    //meaing that the index is to the left of tmp_index
+                    case 1:
+                        //set the right-adjacent cell to a path
+                        matrix.get(index+1).set_state(Cell.CELL_PATH);
+                        break;
+                    //meaning that the index is below tmp_index
+                    case 2:
+                        //set the up-adjacent cell to a path
+                        matrix.get(index-(matrix_w)).set_state(Cell.CELL_PATH);
+                        break;
+                    //meaning that the index is above tmp_index
+                    case 3:
+                        //set the down-adjacent cell to a path
+                        matrix.get(index+(matrix_w)).set_state(Cell.CELL_PATH);
+                        break;
+                }
+                //the new current index is the random neighbour selected
+                index_ref[0] = tmp_index;
+                //the current cell is the random neighbour selected
+                curr = tmp;
+                //set the state of the new current cell to a visited path
+                curr.set_state(Cell.CELL_PATH);
+                curr.add_state(Cell.CELL_VISITED);
+            } else {
+                index_ref[0] = (int) stack.pop();
+            }
         }
     }
     
@@ -672,113 +727,60 @@ public class Maze extends JPanel{
         //index is out of bounds
         return false;
     }
-   
-    //code needs fixing, need to debug this function,
-    //then the project is finished
-    /*
-    public void prims(StatMaker statMaker)
+    
+    public void prims_frame(StatMaker statMaker, ArrayList<Pair> cells)
     {
-        //set all the nodes in the maze to a wall
-        maze_set();
-        
-        //array to contain all the cells
-        ArrayList<Integer> cells = new ArrayList<>();
-        
-        //set the statistical generate header to 'prims'
-        statMaker.stat_generate = "Prims";
-        
-        //initialize the random number generator
+        //random number generator
         Random rand = new Random();
-        
-        //set the current node to the end node, and begin generation from here
-        int index = start_node_pos;
-        Cell curr = matrix.get(index);
-        
-        //set the current node as visited.
-        curr.add_state(Cell.CELL_VISITED);
-        
-        //add the current cell to the cells array
-        cells.add(index);
-        
-        //contain an array which will contain the neighbours
-        ArrayList<Integer> neighbours = null;
-        
-        //while there are cells to visit 
-        while (!cells.isEmpty()) {
-            
-            //select a random cell 
+        //while there are cells still to be processed
+        if (!cells.isEmpty()) {
+            //select a random pair of cells from the list
             int rand_index = rand.nextInt(cells.size());
             
-            //get the index from the cells array
-            index = cells.get(rand_index);
+            //store the pair into a variable, and remove it 
+            Pair pair = cells.remove(rand_index);
             
-            //get a reference to the cell from the maze
-            curr = matrix.get(index);
+            //get the furthest away cell
+            int index = pair.second;
             
-            //get all adjacent cells of the current node 
-            neighbours = get_neighbours(index, 2,
-                    Cell.CELL_VISITED | Cell.CELL_VISITED);
+            //get the closest cell
+            int prev_index = pair.first;
             
-            //set the current cell to a path and visited
-            curr.set_state(Cell.CELL_PATH);
-            curr.add_state(Cell.CELL_VISITED);
+            //get the x and y coordinates of the chosen cell
+            int x = index % matrix_w;
+            int y = (int) (index / matrix_w);
             
-            //remove it from the cells array
-            cells.remove(rand_index);
+            //get their matrix references
+            Cell curr = matrix.get(index);
+            Cell prev = matrix.get(prev_index);
             
-            //if there are any non-visited neighbours
-            if (!neighbours.isEmpty()) {
-                //get the index of the randomly selected neighbour
-                int tmp_index = neighbours.get(rand.nextInt(neighbours.size()));
-                //get the cell of the randomly selected neighbour
-                Cell tmp = matrix.get(tmp_index);
+            //if the chosen cell is a wall
+            if (curr.check_state(Cell.CELL_WALL)) {
+                //set the current and previous cells to paths
+                curr.set_state(Cell.CELL_PATH);
+                prev.set_state(Cell.CELL_PATH);
                 
-                //check how the index compares to find the adjacent node 
-                //which needs to be also set.
-                int d = index_compare(index, tmp_index);
-                switch (d) {
-                    //meaning that the index is to the right of tmp_index
-                    case 0:
-                        //set the left-adjacent cell to a path
-                        matrix.get(index-1).set_state(Cell.CELL_PATH);
-                        break;
-                    //meaing that the index is to the left of tmp_index
-                    case 1:
-                        //set the right-adjacent cell to a path
-                        matrix.get(index+1).set_state(Cell.CELL_PATH);
-                        break;
-                    //meaning that the index is below tmp_index
-                    case 2:
-                        //set the up-adjacent cell to a path
-                        matrix.get(index-matrix_w).set_state(Cell.CELL_PATH);
-                        break;
-                    //meaning that the index is above tmp_index
-                    case 3:
-                        //set the down-adjacent cell to a path
-                        matrix.get(index+matrix_w).set_state(Cell.CELL_PATH);
-                        break;
+                //store that cells neighbours into the cells array,
+                //so they can be processed
+                if (x >= 2 && matrix.get(index-2).check_state(
+                        Cell.CELL_WALL)) {
+                    cells.add(new Pair(index-1, index-2));
                 }
-                tmp.set_state(Cell.CELL_PATH);
+                if (y >= 2 && matrix.get(index-matrix_w*2).check_state(
+                        Cell.CELL_WALL)) {
+                    cells.add(new Pair(index-matrix_w, index-matrix_w*2));
+                }
+                if (x < matrix_w-2 && matrix.get(index+2).check_state(
+                        Cell.CELL_WALL)) {
+                    cells.add(new Pair(index+1, index+2));
+                }
+                if (y < matrix_h-2 && matrix.get(index+matrix_w*2).check_state(
+                        Cell.CELL_WALL)) {
+                    cells.add(new Pair(index+matrix_w, index+matrix_w*2));
+                }
             }
-            
-            //add all the non-visited neighbours to the cells array to await
-            //their visit
-            for (int i = 0; i < neighbours.size(); i++) {
-                Cell neighbour = matrix.get(neighbours.get(i));
-                if (!neighbour.check_state(Cell.CELL_VISITED))
-                    cells.add(neighbours.get(i));
-            }
-        }
-        
-        //reset the end node and start node states
-        matrix.get(start_node_pos).set_state(Cell.CELL_START);
-        matrix.get(end_node_pos).set_state(Cell.CELL_END);
-        
-        for (int i = 0; i < matrix.size(); i++) {
-            matrix.get(i).remove_state(Cell.CELL_START);
         }
     }
-    */
     
     public void prims(StatMaker statMaker)
     {

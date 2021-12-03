@@ -10,12 +10,17 @@ import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.GridLayout;
 import java.io.File;
+import java.util.ArrayList;
+import java.util.Stack;
+import java.util.TimerTask;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
 import javax.swing.JTextField;
+import java.util.Timer;
+import javax.swing.JToggleButton;
 
 /**
  *
@@ -26,7 +31,9 @@ import javax.swing.JTextField;
 /* Window Class - the window class will be used to store all the components 
    which are to be presented to the user such as the maze and the buttons
 */
-public class Window extends JFrame{
+
+public class Window extends JFrame
+{
     //store the current width and height of the maze
     private int w, h;
     //the maze component of the window which will be displayed and traversed.
@@ -77,6 +84,9 @@ public class Window extends JFrame{
     
     //button which opens the man pages when pressed
     private JButton manPageOpen;
+    
+    //toggle button to toggle the speed of the functions performed
+    private JToggleButton toggleSpeed;
     
     /* This will initialize all the attributes of the Window
     */
@@ -193,12 +203,19 @@ public class Window extends JFrame{
         manPageOpen.setBounds(this.w-210, this.h-110, 180, 60);
         manPageOpen.addActionListener(e -> openManPage());
         
+        //toggle button initialisation
+        toggleSpeed = new JToggleButton();
+        toggleSpeed.setBounds(10, this.h-110, 180, 60);
+        toggleSpeed.setText("Slow (OFF)");
+        toggleSpeed.addActionListener(e -> speedToggler());
+        
         //adding everything to the window
         add(maze);
         add(leftUtils);
         add(rightUtils);
         add(userSolnTxt);
         add(manPageOpen);
+        add(toggleSpeed);
     }
     
     public void soln_validate()
@@ -352,9 +369,100 @@ public class Window extends JFrame{
         //if the algorithm requested is DFS
         if (maze_str == "DFS") {
             //call the DFS algorithm
-            maze.DFS(statMaker);
+            //maze.DFS(statMaker);
+            
+            //if the button is currently pressed
+            if (toggleSpeed.isSelected()) {
+                for (int i = 0; i < maze.matrix.size(); i++) {
+                    Cell curr = maze.matrix.get(i);
+                    curr.set_state(Cell.CELL_WALL);
+                }
+                
+                int start_node_index = 1 + maze.matrix_w;
+                int end_node_index = (maze.matrix_w * (maze.matrix_w - 1) - 2);
+                
+                int []index_ref = new int[1];
+                index_ref[0] = start_node_index;
+                
+                Stack stack = new Stack();
+                
+                stack.push(index_ref[0]);
+                
+                Timer timer = new Timer();
+                
+                TimerTask dfs_task = new TimerTask() {
+                    public void run()
+                    {
+                        if (!stack.isEmpty()) {
+                            maze.DFS_frame(statMaker, stack, index_ref);
+                        } else {
+                            timer.cancel();
+                            //reset the start and end node states
+                            maze.matrix.get(start_node_index).set_state(
+                                    Cell.CELL_START);
+                            maze.matrix.get(end_node_index).set_state(
+                                    Cell.CELL_END);
+                        }
+                    }
+                };
+                
+                timer.schedule(dfs_task, 60, 60);
+            //if the button is not currently pressed
+            } else {
+                //run the algorithm normally, not fast
+                maze.DFS(statMaker);
+            }
         } else if (maze_str == "Prims") {
-            maze.prims(statMaker);
+            //if the button is currently pressed
+            if (toggleSpeed.isSelected()) {
+                statMaker.stat_generate = "Prims";
+                //set all the cells in the maze to walls
+                for (int i = 0; i < maze.matrix.size(); i++) {
+                    Cell curr = maze.matrix.get(i);
+                    curr.set_state(Cell.CELL_WALL);
+                }
+
+                //global array list to maintain the storage of cells
+                ArrayList<Pair> cells = new ArrayList<>();
+
+                //the start and end node indexes
+                int start_node_index = 1 + maze.matrix_w;
+                int end_node_index =  (maze.matrix_w * (maze.matrix_h - 1) - 2);
+
+                //store the initial pair, which is the starting position 
+                //of the generation
+                cells.add(new Pair((1 + maze.matrix_w), (1 + maze.matrix_w)));
+
+                //timer variable used to schedule the procedure
+                Timer timer = new Timer();
+                
+                //the task which is going to be scheduled
+                TimerTask prims_task = new TimerTask() 
+                {
+                    public void run()
+                    {        
+                        //if there are still cells to process
+                        if (!cells.isEmpty()) {
+                            //show next frame
+                            maze.prims_frame(statMaker, cells);
+                        } else {
+                            //cancel the timer
+                            timer.cancel();
+                            //reset the start and end node states
+                            maze.matrix.get(start_node_index).set_state(
+                                    Cell.CELL_START);
+                            maze.matrix.get(end_node_index).set_state(
+                                    Cell.CELL_END);
+                        }
+                    }
+                };
+
+                //schedule prims algorithm every second
+                timer.schedule(prims_task, 60, 60);
+            } else {
+                //standard generation, no delay
+                maze.prims(statMaker);
+            }
         }
     }
     
@@ -365,5 +473,17 @@ public class Window extends JFrame{
         
         //set the window to visible
         manual.setVisible(true);
+    }
+    
+    public void speedToggler()
+    {
+        //if the button is pressed
+        if (toggleSpeed.isSelected()) {
+            //change the text to tell the user it is on
+            toggleSpeed.setText("Slow (ON)");
+        } else {
+            //change the text to tell the user it is off
+            toggleSpeed.setText("Slow (OFF)");
+        }
     }
 }
