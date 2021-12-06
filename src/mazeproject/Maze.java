@@ -123,23 +123,47 @@ public class Maze extends JPanel{
         }
     }
     
+    public void maze_removeall()
+    {
+        for (int i = 0; i < matrix.size(); i++)  {
+            matrix.get(i).remove_state(Cell.CELL_VISITED);
+            matrix.get(i).remove_state(Cell.CELL_SEARCHED);
+            matrix.get(i).remove_state(Cell.CELL_WALL);
+            matrix.get(i).remove_state(Cell.CELL_PATH);
+            matrix.get(i).remove_state(Cell.CELL_START);
+            matrix.get(i).remove_state(Cell.CELL_END);
+        }
+    }
+    
     public void DFS_frame(StatMaker statMaker, Stack stack, int []index_ref)
     {
+        //random number generator
         Random rand = new Random();
+        //array list used to store the neighbours for the current index
         ArrayList<Integer> neighbours = null;
         
+        //get the current index
         int index = index_ref[0];
         
+        //get a reference of the cell in the maze
         Cell curr = matrix.get(index);
         
+        //frame which will run if there are still cells on the stack
         if (!stack.isEmpty()) {
+            //get the neighbours which are not visited relative to the current
+            //index
             neighbours = get_neighbours(index, 2, Cell.CELL_VISITED);
             
+            //if there are neighbours relative to this index
             if (!neighbours.isEmpty()) {
+                //get a random neighbour
                 int tmp_index = neighbours.get(rand.nextInt(neighbours.size()));
+                //get a reference of the cell in the maze
                 Cell tmp = matrix.get(tmp_index);
+                //push the current index onto the top of the stack
                 stack.push(index);
                 
+                //determine which cell needs to be set to a path
                 int d = index_compare(index, tmp_index);
                 switch (d) {
                     //meaning that the index is to the right of tmp_index
@@ -171,6 +195,7 @@ public class Maze extends JPanel{
                 curr.set_state(Cell.CELL_PATH);
                 curr.add_state(Cell.CELL_VISITED);
             } else {
+                //set the current index to the top of the stack
                 index_ref[0] = (int) stack.pop();
             }
         }
@@ -258,86 +283,6 @@ public class Maze extends JPanel{
         //save the number of paths found into the statMaker object
         statMaker.stat_path_count = count_paths();
     }
-    
-    //the Bredth-First-Search algorithm, might need to reimplement
-    //seems wrong, does not work as intended
-    public void BFS()
-    {
-        //set all the nodes in the maze to a wall
-        maze_set();
-        
-        //initialize the queue
-        Queue queue = new LinkedList<>();
-        
-        //initialize the random number generator
-        Random rand = new Random();
-        
-        //set the current node to the end node, and begin search from here
-        int index = end_node_pos;
-        Cell curr = matrix.get(index);
-        ArrayList<Integer> neighbours = null;
-        //set the current node as visited.
-        curr.add_state(Cell.CELL_VISITED);
-        do {
-            //get all adjacent cells of the current node 
-            neighbours = get_neighbours(index, 2, Cell.CELL_VISITED);
-            //if there are any non-visited neighbours
-            if (!neighbours.isEmpty()) {
-                //get the index of the randomly selected neighbour
-                int tmp_index = neighbours.get(rand.nextInt(neighbours.size()));
-                //get the cell of the randomly selected neighbour
-                Cell tmp = matrix.get(tmp_index);
-                //add the index of the current cell into the queue
-                queue.add(index);
-                
-                //check how the index compares to find the adjacent node 
-                //which needs to be also set.
-                int d = index_compare(index, tmp_index);
-                switch (d) {
-                    //meaning that the index is to the right of tmp_index
-                    case 0:
-                        //set the left-adjacent cell to a path
-                        matrix.get(index-1).set_state(Cell.CELL_PATH);
-                        break;
-                    //meaing that the index is to the left of tmp_index
-                    case 1:
-                        //set the right-adjacent cell to a path
-                        matrix.get(index+1).set_state(Cell.CELL_PATH);
-                        break;
-                    //meaning that the index is below tmp_index
-                    case 2:
-                        //set the up-adjacent cell to a path
-                        matrix.get(index-(matrix_w)).set_state(Cell.CELL_PATH);
-                        break;
-                    //meaning that the index is above tmp_index
-                    case 3:
-                        //set the down-adjacent cell to a path
-                        matrix.get(index+(matrix_w)).set_state(Cell.CELL_PATH);
-                        break;
-                }
-                
-                //the new current index is the random neighbour selected
-                index = tmp_index;
-                //the current cell is the random neighbour selected
-                curr = tmp;
-                //set the state of the new current cell to a visited path
-                curr.set_state(Cell.CELL_PATH);
-                curr.add_state(Cell.CELL_VISITED);
-            } else {
-                //set the current cell index as the index at the start of the
-                //queue
-                index = (int)queue.remove();
-            }
-            //end maze generation if the queue is empty 
-        } while (!queue.isEmpty());
-        
-        //set the state of the start node cell back to the start node
-        matrix.get(start_node_pos).set_state(Cell.CELL_START);
-        
-        //remove the visited state so the algorithm works once applied again
-        for (int i = 0; i < matrix.size(); ++i)
-            matrix.get(i).remove_state(Cell.CELL_VISITED);
-    }
    
     public void BFS_solve(StatMaker statMaker)
     {   
@@ -412,7 +357,31 @@ public class Maze extends JPanel{
         matrix.get(end_node_pos).set_state(Cell.CELL_END);
     }
     
-    
+    public void BFS_frame(StatMaker statMaker, Queue queue, int[] path)
+    {
+        //array list to store all the adjacent neighbours
+        ArrayList<Integer> neighbours  = null;
+        
+        //if there are still elements in the queue to be traversed
+        if (!queue.isEmpty()) {
+            //get the index at the front of the queue
+            int index = (int) queue.remove();
+            //get all the neighbours relative to that queue
+            neighbours = get_neighbours(index, 1, 
+                    Cell.CELL_WALL | Cell.CELL_VISITED);
+            //loop through all the neighbours and add them to the queue
+            for (int i = 0; i < neighbours.size(); i++) {
+                int tmp_index = neighbours.get(i);
+                Cell tmp = matrix.get(tmp_index);
+                queue.add(tmp_index);
+                //set the state of the neighbour to a traversed cell 
+                //to highlight the cell to the user 
+                tmp.set_state(Cell.CELL_SEARCHED);
+                tmp.add_state(Cell.CELL_VISITED);
+                path[tmp_index] = index;
+            }
+        }
+    }
     
     public int []validate(String soln)
     {

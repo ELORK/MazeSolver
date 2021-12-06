@@ -11,6 +11,8 @@ import java.awt.Font;
 import java.awt.GridLayout;
 import java.io.File;
 import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.Queue;
 import java.util.Stack;
 import java.util.TimerTask;
 import javax.swing.JButton;
@@ -347,13 +349,63 @@ public class Window extends JFrame
     
     public void solve()
     {
+        
         //get the string from within the combo box 
         String solve_str = selectSolveCombo.getSelectedItem().toString();
         
         //if the algorithm requested is BFS
         if (solve_str == "BFS") {
-            //call the BFS algorithm
-            maze.BFS_solve(statMaker);
+            if (toggleSpeed.isSelected()) {
+                //queue to store all the elements for BFS
+                Queue queue = new LinkedList<>();
+                
+                //start and end node indexes
+                int start_node_index = 1 + maze.matrix_w;
+                int end_node_index = (maze.matrix_w * (maze.matrix_w - 1) - 2);
+                
+                //add the start node to the front of the queue
+                queue.add(start_node_index);
+                maze.matrix.get(start_node_index).add_state(Cell.CELL_VISITED);
+                
+                //integer array to store the path 
+                int path[] = new int[maze.matrix.size()];
+                
+                //initialise a timer to schedule the function calls
+                Timer timer = new Timer();
+                
+                //timer task, passed to the timer scheduler 
+                TimerTask bfs_task = new TimerTask() 
+                {
+                    public void run() 
+                    {
+                        //get next frame if queue is not empty
+                        if (!queue.isEmpty()) {
+                            maze.BFS_frame(statMaker, queue, path);
+                        } else {
+                            //cancel the timer and stop it from running
+                            timer.cancel();
+                            //loop through the maze and set all the searched
+                            //cells to paths
+                            for (int i = 0; i < maze.matrix.size(); i++) {
+                                Cell tmp = maze.matrix.get(i);
+                                if (tmp.check_state(Cell.CELL_SEARCHED)) {
+                                    tmp.set_state(Cell.CELL_PATH);
+                                }
+                            }
+                            //loop through the found path and set all the cells
+                            //to searched cells to highlight the path
+                            for (int i = end_node_index; i != 0; i = path[i]) {
+                                Cell tmp = maze.matrix.get(i);
+                                tmp.set_state(Cell.CELL_SEARCHED);
+                            }
+                        }
+                    }
+                };
+                //schedule the function every 1/6 of a second
+                timer.schedule(bfs_task, 60, 60);
+            } else {
+                maze.BFS_solve(statMaker);
+            }
         //if the algorithm requested is the recursive algorithm
         } else if (solve_str == "Recursive") {
             //call the recursive algorithm
@@ -367,35 +419,45 @@ public class Window extends JFrame
         String maze_str = selectMazeCombo.getSelectedItem().toString();
         
         //if the algorithm requested is DFS
-        if (maze_str == "DFS") {
-            //call the DFS algorithm
-            //maze.DFS(statMaker);
-            
+        if (maze_str == "DFS") { 
             //if the button is currently pressed
             if (toggleSpeed.isSelected()) {
+                maze.maze_removeall();
+                
+                //set all the cells in the maze to walls
                 for (int i = 0; i < maze.matrix.size(); i++) {
                     Cell curr = maze.matrix.get(i);
                     curr.set_state(Cell.CELL_WALL);
                 }
                 
+                //start index 
                 int start_node_index = 1 + maze.matrix_w;
+                //end index
                 int end_node_index = (maze.matrix_w * (maze.matrix_w - 1) - 2);
                 
+                //an array which is used to pass a single integer by reference
                 int []index_ref = new int[1];
+                //set the current index to the starting cell
                 index_ref[0] = start_node_index;
                 
+                //initialise a stack 
                 Stack stack = new Stack();
                 
+                //push the starting index on the top of the stack
                 stack.push(index_ref[0]);
                 
+                //initialise a timer to schedule the frame procedure
                 Timer timer = new Timer();
                 
+                //the task which is to be scheduled every second
                 TimerTask dfs_task = new TimerTask() {
                     public void run()
                     {
+                        //if the stack is not empty, get the next frame
                         if (!stack.isEmpty()) {
                             maze.DFS_frame(statMaker, stack, index_ref);
                         } else {
+                            //cancel the timer, to remove the thread
                             timer.cancel();
                             //reset the start and end node states
                             maze.matrix.get(start_node_index).set_state(
@@ -406,15 +468,20 @@ public class Window extends JFrame
                     }
                 };
                 
+                //schedule the task every second
                 timer.schedule(dfs_task, 60, 60);
+                
             //if the button is not currently pressed
             } else {
                 //run the algorithm normally, not fast
+                maze.maze_removeall();
                 maze.DFS(statMaker);
             }
         } else if (maze_str == "Prims") {
             //if the button is currently pressed
             if (toggleSpeed.isSelected()) {
+                maze.maze_removeall();
+                
                 statMaker.stat_generate = "Prims";
                 //set all the cells in the maze to walls
                 for (int i = 0; i < maze.matrix.size(); i++) {
@@ -460,6 +527,7 @@ public class Window extends JFrame
                 //schedule prims algorithm every second
                 timer.schedule(prims_task, 60, 60);
             } else {
+                maze.maze_removeall();
                 //standard generation, no delay
                 maze.prims(statMaker);
             }

@@ -52,7 +52,7 @@ public class Cell extends JPanel{
                 break;
             //if the cell is a searched node
             case Cell.CELL_SEARCHED:
-                setBackground(Color.PINK);
+                setBackground(new Color(0xff, 0x00, 0xff));
                 break;
         }
         //define a border for each cell, easily determine where the cells are 
@@ -86,7 +86,7 @@ public class Cell extends JPanel{
             //if the cell is a searched node
             case Cell.CELL_SEARCHED:
                 //the pink colour, this is a volatile choice 
-                setBackground(new Color(0xff, 0x7a, 0xf4));
+                setBackground(new Color(0xff, 0x00, 0xff));
                 break;
         }
     }
@@ -111,5 +111,13 @@ public class Cell extends JPanel{
         /* bitwise AND to check the bit of the state
         */
         return ((flags & state) > 0);
+    }
+    
+    public void increment_visit_state()
+    {
+        //set the background colour to a brigher colour, further and further
+        //from white 
+        setBackground(new Color(0xff, 0x00, 
+                0xff));
     }
 }
